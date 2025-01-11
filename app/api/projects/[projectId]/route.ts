@@ -24,9 +24,10 @@ interface Project {
   artboards?: Artboard[];
 }
 
+// Adjust the context type based on Next.js documentation
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { projectId: string } }
+  _request: NextRequest,
+  { params }: { params: { projectId: string } } // The dynamic route parameter
 ) {
   const client = new MongoClient(uri, {
     serverApi: {
@@ -37,15 +38,14 @@ export async function GET(
   });
 
   try {
-    const { projectId } = params;
-    
+    const { projectId } = params; // Extract projectId from params
+    console.log('Fetching project:', projectId);
+
     await client.connect();
     const db = client.db("test");
     const projects = db.collection<Project>("projects");
 
-    console.log('Fetching project:', projectId);
     const project = await projects.findOne({ projectId });
-    
     return NextResponse.json(project || {});
   } catch (error: unknown) {
     if (error instanceof Error) {
