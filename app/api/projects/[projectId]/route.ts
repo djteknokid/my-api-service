@@ -24,10 +24,9 @@ interface Project {
   artboards?: Artboard[];
 }
 
-// Adjust the context type based on Next.js documentation
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { projectId: string } } // The dynamic route parameter
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   const client = new MongoClient(uri, {
     serverApi: {
@@ -38,7 +37,7 @@ export async function GET(
   });
 
   try {
-    const { projectId } = params; // Extract projectId from params
+    const { projectId } = await params;  // await the params
     console.log('Fetching project:', projectId);
 
     await client.connect();
