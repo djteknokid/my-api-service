@@ -1,8 +1,8 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextRequest, NextResponse } from 'next/server';
-console.log('HIT THE PROJECT ID GET ENDPOINT');
-console.log('MongoDB URI:', process.env.MONGODB_URI); 
-const uri = process.env.MONGODB_URI || "mongodb+srv://djteknokid:jisu0710@cluster0.ew4my.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+// Environment variable for MongoDB connection
+const uri = process.env.MONGODB_URI!;
 
 interface ChatHistory {
   id: string;
@@ -25,48 +25,64 @@ interface Project {
   artboards?: Artboard[];
 }
 
+// Utility to handle CORS
+function setCorsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*', // Allow all origins for testing. Limit in production.
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+// Preflight CORS handler for OPTIONS
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: setCorsHeaders() });
+}
+
+// GET: Fetch project by projectId
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  _request: NextRequest,
+  { params }: { params: { projectId: string } }
 ) {
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
-    }
+    },
   });
 
   try {
-    const { projectId } = await params; 
+    const { projectId } = params;
     console.log('Fetching project:', projectId);
 
     await client.connect();
     const db = client.db("test");
     const projects = db.collection<Project>("projects");
 
+    // Fetch the project with the provided projectId
     const project = await projects.findOne({ projectId });
-    return NextResponse.json(project || {});
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error('DB Error:', err);
-      return NextResponse.json({ error: err.message }, { status: 500 });
-    }
-    console.error('Unknown error:', err);
-    return NextResponse.json({ error: 'An unknown error occurred' }, { status: 500 });
+
+    return NextResponse.json(project || {}, { headers: setCorsHeaders() });
+  } catch (err) {
+    console.error('DB Error:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unknown error occurred' },
+      { status: 500, headers: setCorsHeaders() }
+    );
   } finally {
     await client.close();
   }
 }
 
+// POST: Update or create project by projectId
 export async function POST(request: NextRequest) {
-  console.log('HIT THE PROJECT ID POST ENDPOINT');
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
-    }
+    },
   });
 
   try {
@@ -76,43 +92,34 @@ export async function POST(request: NextRequest) {
       artboards?: Artboard[];
     };
 
-    console.log('Saving artboards under project:', { projectId, artboardCount: artboards?.length });
+    console.log('Saving project:', { projectId, artboardCount: artboards?.length });
+
     await client.connect();
     const db = client.db("test");
     const projects = db.collection<Project>("projects");
 
-    const update: { $set: Project } = {
+    // Update or insert the project
+    const update = {
       $set: {
         projectId,
         lastUpdated: new Date(),
         ...(chatHistory && { chatHistory }),
-        ...(artboards && { artboards })
-      }
+        ...(artboards && { artboards }),
+      },
     };
 
-    const result = await projects.updateOne(
-      { projectId },
-      update,
-      { upsert: true }
-    );
+    const result = await projects.updateOne({ projectId }, update, { upsert: true });
 
-    return NextResponse.json({
-      message: "Project updated successfully",
-      result
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('MongoDB save error:', error);
-      return NextResponse.json({
-        message: "Failed to update project",
-        error: error.message
-      }, { status: 500 });
-    }
-    console.error('Unknown error:', error);
-    return NextResponse.json({
-      message: "Failed to update project",
-      error: 'An unknown error occurred'
-    }, { status: 500 });
+    return NextResponse.json(
+      { message: "Project updated successfully", result },
+      { headers: setCorsHeaders() }
+    );
+  } catch (err) {
+    console.error('MongoDB save error:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unknown error occurred' },
+      { status: 500, headers: setCorsHeaders() }
+    );
   } finally {
     await client.close();
   }
