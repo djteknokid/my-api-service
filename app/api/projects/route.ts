@@ -1,5 +1,6 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextResponse } from 'next/server';
+console.log('HIT THE MAIN PROJECTS GET ENDPOINT');
 console.log('MongoDB URI:', process.env.MONGODB_URI); 
 const uri = process.env.MONGODB_URI!;
 
@@ -72,6 +73,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  console.log('HIT THE MAIN PROJECTS POST ENDPOINT');
+  const headers = {
+    'Access-Control-Allow-Origin': '*',  // For development. Change this for production
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+  if (request.method === 'OPTIONS') {
+    return NextResponse.json({}, { headers });
+  }
+
+
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
