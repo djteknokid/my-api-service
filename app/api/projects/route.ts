@@ -1,6 +1,6 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextResponse } from 'next/server';
-
+console.log('MongoDB URI:', process.env.MONGODB_URI); 
 const uri = process.env.MONGODB_URI!;
 
 interface ChatHistory {
