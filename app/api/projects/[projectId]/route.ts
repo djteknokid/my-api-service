@@ -1,6 +1,6 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextRequest, NextResponse } from 'next/server';
-
+console.log('MongoDB URI:', process.env.MONGODB_URI); 
 const uri = process.env.MONGODB_URI || "mongodb+srv://djteknokid:jisu0710@cluster0.ew4my.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 interface ChatHistory {
