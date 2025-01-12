@@ -41,8 +41,8 @@ export async function OPTIONS() {
 
 // GET: Fetch project by projectId
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: { projectId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   const client = new MongoClient(uri, {
     serverApi: {
@@ -53,7 +53,7 @@ export async function GET(
   });
 
   try {
-    const { projectId } = params;
+    const { projectId } = await params;
     console.log('Fetching project:', projectId);
 
     await client.connect();
