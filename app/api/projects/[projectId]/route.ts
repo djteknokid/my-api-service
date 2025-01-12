@@ -1,5 +1,6 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextRequest, NextResponse } from 'next/server';
+console.log('HIT THE PROJECT ID GET ENDPOINT');
 console.log('MongoDB URI:', process.env.MONGODB_URI); 
 const uri = process.env.MONGODB_URI || "mongodb+srv://djteknokid:jisu0710@cluster0.ew4my.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -59,6 +60,7 @@ export async function GET(
 }
 
 export async function POST(request: NextRequest) {
+  console.log('HIT THE PROJECT ID POST ENDPOINT');
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
