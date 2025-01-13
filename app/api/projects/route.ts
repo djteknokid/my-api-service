@@ -96,10 +96,12 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { projectId, chatHistory, artboards } = await request.json() as {
+    const { projectId, chatHistory, artboards, publicHtml, isPublished } = await request.json() as {
       projectId: string;
       chatHistory?: ChatHistory;
       artboards?: Artboard[];
+      publicHtml?: string;
+      isPublished?: boolean;
     };
 
     if (!projectId) {
@@ -109,7 +111,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Saving project:', { projectId, artboardCount: artboards?.length });
+    console.log('Saving project:', { 
+      projectId, 
+      artboardCount: artboards?.length,
+      hasHtml: !!publicHtml 
+    });
 
     await client.connect();
     const db = client.db("test");
@@ -121,6 +127,8 @@ export async function POST(request: NextRequest) {
         lastUpdated: new Date(),
         ...(chatHistory && { chatHistory }),
         ...(artboards && { artboards }),
+        ...(publicHtml && { publicHtml }),
+        ...(isPublished && { isPublished })
       },
     };
 
