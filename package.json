@@ -2,12 +2,12 @@
   "name": "my-api-service",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+"scripts": {
+  "dev": "next dev -p 3000",  
+  "build": "next build",
+  "start": "next start -p 3000"
+},
+
   "dependencies": {
     "mongodb": "^6.12.0",
     "next": "15.1.4",

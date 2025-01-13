@@ -37,6 +37,8 @@ interface Project {
   lastUpdated: Date;
   chatHistory?: ChatHistory;
   artboards?: Artboard[];
+  publicHtml?: string;
+  isPublished?: boolean;
 }
 
 // Utility to set CORS headers
