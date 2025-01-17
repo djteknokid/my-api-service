@@ -6,7 +6,10 @@ console.log('MongoDB URI:', process.env.MONGODB_URI);
 
 const uri = process.env.MONGODB_URI!;
 
-const allowedOrigins = ['http://localhost:3001', 'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96'];
+const allowedOrigins = [
+  'http://localhost:3001',
+  'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96'
+];
 
 // Utility to set CORS headers
 function setCorsHeaders(origin: string | null) {
@@ -18,7 +21,7 @@ function setCorsHeaders(origin: string | null) {
   };
 }
 
-// Handle preflight (OPTIONS) requests
+// Preflight (OPTIONS) handler
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin');
   return NextResponse.json({}, { headers: setCorsHeaders(origin) });
@@ -113,7 +116,8 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { projectId, chatHistory, artboards, publicHtml, isPublished } = await request.json() as {
+    const payload = await request.json();
+    const { projectId, chatHistory, artboards, publicHtml, isPublished } = payload as {
       projectId: string;
       chatHistory?: ChatHistory;
       artboards?: Artboard[];
@@ -122,6 +126,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (!projectId) {
+      console.error('Missing projectId in request');
       return NextResponse.json(
         { message: 'Missing projectId' },
         { status: 400, headers: setCorsHeaders(origin) }
