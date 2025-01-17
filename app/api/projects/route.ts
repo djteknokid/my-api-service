@@ -2,29 +2,10 @@ import { MongoClient, ServerApiVersion } from 'mongodb';
 import { NextRequest, NextResponse } from 'next/server';
 
 console.log('HIT THE MAIN PROJECTS ROUTE');
-console.log('MongoDB URI:', process.env.MONGODB_URI);
+console.log('MongoDB URI:', process.env.MONGODB_URI); 
 
 const uri = process.env.MONGODB_URI!;
 
-const allowedOrigins = ['http://localhost:3001', 'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96/'];
-
-// Utility to set CORS headers
-function setCorsHeaders(origin: string | null) {
-  const isAllowedOrigin = origin && allowedOrigins.includes(origin);
-  return {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-}
-
-// Handle preflight (OPTIONS) requests
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  return NextResponse.json({}, { headers: setCorsHeaders(origin) });
-}
-
-// Interfaces
 interface ChatHistory {
   messages: ChatMessage[];
   metadata?: {
@@ -60,9 +41,22 @@ interface Project {
   isPublished?: boolean;
 }
 
+// Utility to set CORS headers
+function setCorsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',  // Adjust in production for security
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: setCorsHeaders() });
+}
+
 // GET: Fetch all projects
-export async function GET(request: NextRequest) {
-  const origin = request.headers.get('origin');
+export async function GET() {
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -79,31 +73,20 @@ export async function GET(request: NextRequest) {
 
     const allProjects = await projects.find({}).toArray();
 
-    return NextResponse.json(
-      { projects: allProjects },
-      { headers: setCorsHeaders(origin) }
-    );
+    return NextResponse.json({ projects: allProjects }, { headers: setCorsHeaders() });
   } catch (error: unknown) {
     console.error('Error fetching projects:', error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        projects: [],
-      },
-      { status: 500, headers: setCorsHeaders(origin) }
+      { error: error instanceof Error ? error.message : 'Unknown error occurred', projects: [] },
+      { status: 500, headers: setCorsHeaders() }
     );
   } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      console.error('Error closing MongoDB client:', closeError);
-    }
+    await client.close();
   }
 }
 
 // POST: Create or update a project
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get('origin');
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -124,28 +107,28 @@ export async function POST(request: NextRequest) {
     if (!projectId) {
       return NextResponse.json(
         { message: 'Missing projectId' },
-        { status: 400, headers: setCorsHeaders(origin) }
+        { status: 400, headers: setCorsHeaders() }
       );
     }
 
-    console.log('Saving project:', {
-      projectId,
+    console.log('Saving project:', { 
+      projectId, 
       artboardCount: artboards?.length,
-      hasHtml: !!publicHtml,
+      hasHtml: !!publicHtml 
     });
 
     await client.connect();
     const db = client.db("test");
     const projects = db.collection<Project>("projects");
 
-    const update = {
+    const update: { $set: Partial<Project> } = {
       $set: {
         projectId,
         lastUpdated: new Date(),
         ...(chatHistory && { chatHistory }),
         ...(artboards && { artboards }),
         ...(publicHtml && { publicHtml }),
-        ...(isPublished && { isPublished }),
+        ...(isPublished && { isPublished })
       },
     };
 
@@ -153,21 +136,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { message: "Project updated successfully", result },
-      { headers: setCorsHeaders(origin) }
+      { headers: setCorsHeaders() }
     );
   } catch (error: unknown) {
     console.error('Error saving project:', error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      },
-      { status: 500, headers: setCorsHeaders(origin) }
+      { error: error instanceof Error ? error.message : 'Unknown error occurred' },
+      { status: 500, headers: setCorsHeaders() }
     );
   } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      console.error('Error closing MongoDB client:', closeError);
-    }
+    await client.close();
   }
 }
