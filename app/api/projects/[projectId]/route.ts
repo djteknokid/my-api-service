@@ -8,7 +8,7 @@ const allowedOrigins = [
   'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96/'
 ];
 
-// CORS utility
+// Utility to set CORS headers
 function setCorsHeaders(origin: string | null) {
   const isAllowedOrigin = origin && allowedOrigins.includes(origin);
   return {
@@ -25,7 +25,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // GET: Fetch project by projectId
-export async function GET(request: NextRequest, context: { params: { projectId: string } }) {
+export async function GET(request: NextRequest, context: { params: Record<string, string | undefined> }) {
   const origin = request.headers.get('origin');
   const client = new MongoClient(uri, {
     serverApi: {
@@ -36,7 +36,15 @@ export async function GET(request: NextRequest, context: { params: { projectId: 
   });
 
   try {
-    const { projectId } = context.params; // Corrected to use `context.params`
+    const projectId = context.params.projectId;
+    if (!projectId) {
+      console.error('Missing projectId in parameters');
+      return NextResponse.json(
+        { error: 'Missing projectId' },
+        { status: 400, headers: setCorsHeaders(origin) }
+      );
+    }
+
     console.log('GET endpoint hit for projectId:', projectId);
 
     // Connect to the database
@@ -62,7 +70,7 @@ export async function GET(request: NextRequest, context: { params: { projectId: 
       stack: err instanceof Error ? err.stack : null,
     });
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error occurred' },
+      { error: 'An error occurred while fetching the project' },
       { status: 500, headers: setCorsHeaders(origin) }
     );
   } finally {
