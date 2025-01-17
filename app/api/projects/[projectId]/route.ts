@@ -3,12 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const uri = process.env.MONGODB_URI!;
 
-const allowedOrigins = [
-  'http://localhost:3001',
-  'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96'
-];
+const allowedOrigins = ['http://localhost:3001', 'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96/'];
 
-// Utility to set CORS headers
+// CORS utility
 function setCorsHeaders(origin: string | null) {
   const isAllowedOrigin = origin && allowedOrigins.includes(origin);
   return {
@@ -18,7 +15,7 @@ function setCorsHeaders(origin: string | null) {
   };
 }
 
-// Preflight (OPTIONS) handler
+// Preflight CORS handler
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin');
   return NextResponse.json({}, { headers: setCorsHeaders(origin) });
@@ -39,15 +36,7 @@ export async function GET(
   });
 
   try {
-    // Validate params and projectId
-    if (!params || !params.projectId) {
-      console.error('Missing or invalid projectId in parameters');
-      return NextResponse.json(
-        { error: 'Missing or invalid projectId' },
-        { status: 400, headers: setCorsHeaders(origin) }
-      );
-    }
-
+    // Extract `projectId` directly without awaiting `params`
     const { projectId } = params;
     console.log('GET endpoint hit for projectId:', projectId);
 
@@ -67,7 +56,6 @@ export async function GET(
       );
     }
 
-    console.log('Project retrieved successfully:', project);
     return NextResponse.json(project, { headers: setCorsHeaders(origin) });
   } catch (err) {
     console.error('Error fetching project:', {
@@ -75,7 +63,7 @@ export async function GET(
       stack: err instanceof Error ? err.stack : null,
     });
     return NextResponse.json(
-      { error: 'An error occurred while fetching the project' },
+      { error: err instanceof Error ? err.message : 'Unknown error occurred' },
       { status: 500, headers: setCorsHeaders(origin) }
     );
   } finally {
