@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const uri = process.env.MONGODB_URI!;
 
-const allowedOrigins = ['http://localhost:3001', 'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96/'];
+const allowedOrigins = [
+  'http://localhost:3001',
+  'https://serve-dot-zipline.appspot.com/asset/a1c55a9d-1d13-5528-a560-23f2112a947c/zpc/htvt5n7qh96/'
+];
 
 // CORS utility
 function setCorsHeaders(origin: string | null) {
@@ -22,10 +25,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // GET: Fetch project by projectId
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
+export async function GET(request: NextRequest, context: { params: { projectId: string } }) {
   const origin = request.headers.get('origin');
   const client = new MongoClient(uri, {
     serverApi: {
@@ -36,8 +36,7 @@ export async function GET(
   });
 
   try {
-    // Extract `projectId` directly without awaiting `params`
-    const { projectId } = params;
+    const { projectId } = context.params; // Corrected to use `context.params`
     console.log('GET endpoint hit for projectId:', projectId);
 
     // Connect to the database
