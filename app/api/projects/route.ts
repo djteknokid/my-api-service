@@ -44,19 +44,32 @@ interface Project {
 // Utility to set CORS headers
 function setCorsHeaders() {
   return {
-    'Access-Control-Allow-Origin': '*',  // Adjust in production for security
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+    'Access-Control-Max-Age': '86400',
   };
 }
 
 // Handle preflight requests
 export async function OPTIONS() {
-  return NextResponse.json({}, { headers: setCorsHeaders() });
+  return new NextResponse(null, {
+    status: 204,
+    headers: setCorsHeaders()
+  });
 }
 
+// Configure body parser options
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb'
+    }
+  }
+};
+
 // GET: Fetch all projects
-export async function GET() {
+export async function GET(request: NextRequest) {
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -87,6 +100,14 @@ export async function GET() {
 
 // POST: Create or update a project
 export async function POST(request: NextRequest) {
+  // Handle preflight
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: setCorsHeaders()
+    });
+  }
+
   const client = new MongoClient(uri, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -96,12 +117,14 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const { projectId, chatHistory, artboards, publicHtml, isPublished } = await request.json() as {
+    const { projectId, chatHistory, artboards, publicHtml, isPublished, chunkIndex, totalChunks } = await request.json() as {
       projectId: string;
       chatHistory?: ChatHistory;
       artboards?: Artboard[];
       publicHtml?: string;
       isPublished?: boolean;
+      chunkIndex?: number;
+      totalChunks?: number;
     };
 
     if (!projectId) {
@@ -114,13 +137,58 @@ export async function POST(request: NextRequest) {
     console.log('Saving project:', { 
       projectId, 
       artboardCount: artboards?.length,
-      hasHtml: !!publicHtml 
+      hasHtml: !!publicHtml,
+      chunk: chunkIndex !== undefined ? `${chunkIndex + 1}/${totalChunks}` : 'full'
     });
 
     await client.connect();
     const db = client.db("test");
     const projects = db.collection<Project>("projects");
 
+    // Handle chunked artboard updates
+    if (chunkIndex !== undefined && totalChunks !== undefined) {
+      // Store chunk in temporary collection
+      const chunks = db.collection("temp_chunks");
+      await chunks.updateOne(
+        { projectId, chunkIndex },
+        { $set: { artboards } },
+        { upsert: true }
+      );
+
+      // If this is the last chunk, combine all chunks and update the project
+      if (chunkIndex === totalChunks - 1) {
+        const allChunks = await chunks.find({ projectId }).sort({ chunkIndex: 1 }).toArray();
+        const combinedArtboards = allChunks.flatMap(chunk => chunk.artboards);
+
+        // Update project with combined artboards
+        await projects.updateOne(
+          { projectId },
+          {
+            $set: {
+              projectId,
+              lastUpdated: new Date(),
+              artboards: combinedArtboards
+            }
+          },
+          { upsert: true }
+        );
+
+        // Clean up temporary chunks
+        await chunks.deleteMany({ projectId });
+
+        return NextResponse.json(
+          { message: "Project updated successfully with all chunks" },
+          { headers: setCorsHeaders() }
+        );
+      }
+
+      return NextResponse.json(
+        { message: `Chunk ${chunkIndex + 1}/${totalChunks} saved successfully` },
+        { headers: setCorsHeaders() }
+      );
+    }
+
+    // Handle non-chunked updates (chat history, HTML, etc.)
     const update: { $set: Partial<Project> } = {
       $set: {
         projectId,
